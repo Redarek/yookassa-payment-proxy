@@ -16,7 +16,7 @@ func New() *FiberServer {
 
 	server.Use(cors.New(cors.Config{
 		AllowOrigins: "*", // Replace with your frontend domain
-		AllowMethods: "POST",
+		AllowMethods: "GET,POST",
 		AllowHeaders: "*",
 	}))
 

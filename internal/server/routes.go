@@ -13,7 +13,17 @@ import (
 )
 
 func (s *FiberServer) RegisterFiberRoutes() {
-	s.App.Get("/payment", s.YooKassaPaymentHandler)
+	s.App.Post("/payment", s.YooKassaPaymentHandler)
+	s.App.Get("/", s.HelloWorldHandler)
+
+}
+
+func (s *FiberServer) HelloWorldHandler(c *fiber.Ctx) error {
+	resp := fiber.Map{
+		"message": "Hello World",
+	}
+
+	return c.JSON(resp)
 }
 
 // YooKassaPaymentHandler создает платеж через API Yookassa.
