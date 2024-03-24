@@ -1,18 +1,117 @@
 package server
 
 import (
+	"bytes"
+	"encoding/json"
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"yookassa-payment-proxy/internal/models"
 )
 
 func (s *FiberServer) RegisterFiberRoutes() {
-	s.App.Get("/", s.HelloWorldHandler)
-
+	s.App.Get("/payment", s.YooKassaPaymentHandler)
 }
 
-func (s *FiberServer) HelloWorldHandler(c *fiber.Ctx) error {
-	resp := fiber.Map{
-		"message": "Hello World",
+// YooKassaPaymentHandler создает платеж через API Yookassa.
+func (s *FiberServer) YooKassaPaymentHandler(c *fiber.Ctx) error {
+	// Считываем данные платежа из запроса
+	var paymentData models.YooKassaPayment
+	if err := c.BodyParser(&paymentData); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Ошибка при разборе JSON"})
 	}
 
-	return c.JSON(resp)
+	// Преобразуем данные платежа в JSON
+	jsonData, err := json.Marshal(paymentData)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка при конвертации данных в JSON"})
+	}
+
+	// Подготавливаем HTTP запрос к YooKassa
+	req, err := http.NewRequest("POST", "https://api.yookassa.ru/v3/payments", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка при создании запроса"})
+	}
+
+	// Устанавливаем необходимые заголовки
+	req.Header.Set("Idempotence-Key", uuid.New().String())
+	req.Header.Set("Content-Type", "application/json")
+	req.SetBasicAuth(os.Getenv("MERCHANT_ID"), os.Getenv("SECRET_KEY"))
+
+	// Выполняем запрос к YooKassa
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка при отправке запроса к YooKassa"})
+	}
+	defer func(Body io.ReadCloser) {
+		err = Body.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}(resp.Body)
+
+	// Читаем ответ от YooKassa
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка при чтении ответа от YooKassa"})
+	}
+
+	// Десериализуем ответ в структуру
+	var paymentResponse models.YooKassaPaymentResponse
+	if err := json.Unmarshal(respBody, &paymentResponse); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка при десериализации ответа от YooKassa"})
+	}
+
+	// Возвращаем ответ от YooKassa обратно на фронтенд
+	return c.Status(resp.StatusCode).JSON(paymentResponse)
+}
+
+// YookassaHandler обрабатывает создание платежа в YooKassa.
+func (s *FiberServer) YookassaHandler(c *fiber.Ctx) error {
+	// Создание уникального ключа идемпотентности для запроса.
+	idempotenceKey := uuid.New().String()
+
+	// Парсинг тела запроса.
+	var paymentData models.YooKassaPayment // Замените PaymentData на вашу структуру данных.
+	if err := c.BodyParser(&paymentData); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
+	}
+
+	// Конвертация данных платежа в JSON.
+	jsonData, err := json.Marshal(paymentData)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Cannot convert data to JSON"})
+	}
+
+	// Настройка клиента и запроса.
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", "https://api.yookassa.ru/v3/payments", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Cannot create request"})
+	}
+
+	// Добавление необходимых заголовков.
+	req.Header.Add("Idempotence-Key", idempotenceKey)
+	req.Header.Add("Content-Type", "application/json")
+	req.SetBasicAuth(os.Getenv("MERCHANT_ID"), os.Getenv("SECRET_KEY"))
+
+	// Отправка запроса в YooKassa.
+	resp, err := client.Do(req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error sending request to YooKassa"})
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа от YooKassa.
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error reading response body"})
+	}
+
+	// Возвращение ответа от YooKassa клиенту.
+	return c.Status(resp.StatusCode).Send(body)
 }

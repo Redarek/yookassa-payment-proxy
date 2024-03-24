@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  golang-app:
+    container_name: golang-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./cmd/api:/app/cmd/api
