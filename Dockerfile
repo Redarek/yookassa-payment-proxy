@@ -1,17 +1,24 @@
 # Используем официальный образ Golang как базовый
-FROM golang:latest AS builder
+FROM golang:latest
 
-# Устанавливаем рабочую директорию в контейнере
+# Устанавливаем рабочую директорию внутри контейнера
 WORKDIR /app
 
-# Копируем исходный код в контейнер
+# Копируем go.mod и go.sum файлы
+COPY go.mod ./
+COPY go.sum ./
+
+# Загружаем зависимости
+RUN go mod download
+
+# Копируем исходный код проекта в рабочую директорию
 COPY . .
 
-# Собираем и компилируем наше приложение
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/api/main.go
+# Собираем приложение для продакшена
+RUN go build -o main .
 
-# Используем scratch для минимального образа
-FROM scratch
-COPY --from=builder /app/main .
+# Определяем порт, на котором будет работать приложение
 EXPOSE 8080
+
+# Запускаем скомпилированный файл при запуске контейнера
 CMD ["./main"]
