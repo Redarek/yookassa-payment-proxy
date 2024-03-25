@@ -1,35 +1,17 @@
-# Используем образ golang в качестве базового образа
-FROM golang:1.17-alpine AS build
+# Используем официальный образ Golang как базовый
+FROM golang:latest AS builder
 
-# Устанавливаем рабочую директорию внутри контейнера
+# Устанавливаем рабочую директорию в контейнере
 WORKDIR /app
 
-# Копируем зависимости Go модуля
-COPY go.mod go.sum ./
-
-# Загружаем зависимости
-RUN go mod download
-
-# Копируем исходный код внутрь контейнера
+# Копируем исходный код в контейнер
 COPY . .
 
-# Собираем приложение
-RUN go build -o main ./cmd/api
+# Собираем и компилируем наше приложение
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/api/main.go
 
-# Отдельный этап сборки
-FROM alpine:latest
-
-# Устанавливаем необходимые пакеты
-RUN apk --no-cache add ca-certificates
-
-# Копируем бинарный файл из предыдущего этапа сборки
-COPY --from=build /app/main /usr/local/bin/main
-
-# Устанавливаем переменную окружения для порта
-ENV PORT=8080
-
-# Определяем порт, который приложение будет использовать
-EXPOSE $PORT
-
-# Запускаем приложение
-CMD ["main"]
+# Используем scratch для минимального образа
+FROM scratch
+COPY --from=builder /app/main .
+EXPOSE 8080
+CMD ["./main"]
