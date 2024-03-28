@@ -13,7 +13,7 @@ import (
 )
 
 func (s *FiberServer) RegisterFiberRoutes() {
-	s.App.Post("/payment", s.YooKassaPaymentHandler)
+	s.App.Post("/api/payment", s.YooKassaPaymentHandler)
 	s.App.Get("/", s.HelloWorldHandler)
 
 }
@@ -28,6 +28,7 @@ func (s *FiberServer) HelloWorldHandler(c *fiber.Ctx) error {
 
 // YooKassaPaymentHandler создает платеж через API Yookassa.
 func (s *FiberServer) YooKassaPaymentHandler(c *fiber.Ctx) error {
+	log.Println("run yookassa handler")
 	// Считываем данные платежа из запроса
 	var paymentData models.YooKassaPayment
 	if err := c.BodyParser(&paymentData); err != nil {
@@ -39,6 +40,9 @@ func (s *FiberServer) YooKassaPaymentHandler(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка при конвертации данных в JSON"})
 	}
+	log.Println("json input: ", paymentData)
+
+	log.Println("byte input: ", jsonData)
 
 	// Подготавливаем HTTP запрос к YooKassa
 	req, err := http.NewRequest("POST", "https://api.yookassa.ru/v3/payments", bytes.NewBuffer(jsonData))
@@ -75,6 +79,8 @@ func (s *FiberServer) YooKassaPaymentHandler(c *fiber.Ctx) error {
 	if err := json.Unmarshal(respBody, &paymentResponse); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Ошибка при десериализации ответа от YooKassa"})
 	}
+
+	log.Println("yookassa output: ", paymentResponse)
 
 	// Возвращаем ответ от YooKassa обратно на фронтенд
 	return c.Status(resp.StatusCode).JSON(paymentResponse)
