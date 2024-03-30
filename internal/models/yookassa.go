@@ -21,7 +21,7 @@ type YooKassaPayment struct {
 				Value    string `json:"value"`
 				Currency string `json:"currency"`
 			} `json:"amount"`
-			VatCode        string `json:"vat_code"`
+			VatCode        int    `json:"vat_code"`
 			Quantity       string `json:"quantity"`
 			PaymentMode    string `json:"payment_mode,omitempty"`
 			PaymentSubject string `json:"payment_subject,omitempty"`

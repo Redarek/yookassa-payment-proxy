@@ -15,7 +15,6 @@ import (
 func (s *FiberServer) RegisterFiberRoutes() {
 	s.App.Post("/api/payment", s.YooKassaPaymentHandler)
 	s.App.Get("/", s.HelloWorldHandler)
-
 }
 
 func (s *FiberServer) HelloWorldHandler(c *fiber.Ctx) error {
