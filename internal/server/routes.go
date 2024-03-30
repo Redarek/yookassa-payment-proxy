@@ -20,7 +20,7 @@ func (s *FiberServer) RegisterFiberRoutes() {
 
 func (s *FiberServer) HelloWorldHandler(c *fiber.Ctx) error {
 	resp := fiber.Map{
-		"message": "Hello World",
+		"message": "Hello World!",
 	}
 
 	return c.JSON(resp)
@@ -84,50 +84,4 @@ func (s *FiberServer) YooKassaPaymentHandler(c *fiber.Ctx) error {
 
 	// Возвращаем ответ от YooKassa обратно на фронтенд
 	return c.Status(resp.StatusCode).JSON(paymentResponse)
-}
-
-// YookassaHandler обрабатывает создание платежа в YooKassa.
-func (s *FiberServer) YookassaHandler(c *fiber.Ctx) error {
-	// Создание уникального ключа идемпотентности для запроса.
-	idempotenceKey := uuid.New().String()
-
-	// Парсинг тела запроса.
-	var paymentData models.YooKassaPayment // Замените PaymentData на вашу структуру данных.
-	if err := c.BodyParser(&paymentData); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
-	}
-
-	// Конвертация данных платежа в JSON.
-	jsonData, err := json.Marshal(paymentData)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Cannot convert data to JSON"})
-	}
-
-	// Настройка клиента и запроса.
-	client := &http.Client{}
-	req, err := http.NewRequest("POST", "https://api.yookassa.ru/v3/payments", bytes.NewBuffer(jsonData))
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Cannot create request"})
-	}
-
-	// Добавление необходимых заголовков.
-	req.Header.Add("Idempotence-Key", idempotenceKey)
-	req.Header.Add("Content-Type", "application/json")
-	req.SetBasicAuth(os.Getenv("MERCHANT_ID"), os.Getenv("SECRET_KEY"))
-
-	// Отправка запроса в YooKassa.
-	resp, err := client.Do(req)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error sending request to YooKassa"})
-	}
-	defer resp.Body.Close()
-
-	// Чтение ответа от YooKassa.
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error reading response body"})
-	}
-
-	// Возвращение ответа от YooKassa клиенту.
-	return c.Status(resp.StatusCode).Send(body)
 }

@@ -5,9 +5,6 @@ type YooKassaPayment struct {
 		Value    string `json:"value"`
 		Currency string `json:"currency"`
 	} `json:"amount"`
-	PaymentMethodData struct {
-		Type string `json:"type,omitempty"`
-	} `json:"payment_method_data,omitempty"`
 	Confirmation struct {
 		Type      string `json:"type,omitempty"`
 		ReturnURL string `json:"return_url,omitempty"`
@@ -24,8 +21,10 @@ type YooKassaPayment struct {
 				Value    string `json:"value"`
 				Currency string `json:"currency"`
 			} `json:"amount"`
-			VatCode  int    `json:"vat_code"`
-			Quantity string `json:"quantity"`
+			VatCode        string `json:"vat_code"`
+			Quantity       string `json:"quantity"`
+			PaymentMode    string `json:"payment_mode,omitempty"`
+			PaymentSubject string `json:"payment_subject,omitempty"`
 		} `json:"items"`
 		Email string `json:"email,omitempty"`
 		Phone string `json:"phone,omitempty"`
@@ -45,16 +44,10 @@ type YooKassaPaymentResponse struct {
 		AccountID string `json:"account_id"`
 		GatewayID string `json:"gateway_id"`
 	} `json:"recipient"`
-	PaymentMethod struct {
-		Type  string `json:"type"`
-		ID    string `json:"id"`
-		Saved bool   `json:"saved"`
-	} `json:"payment_method"`
 	CreatedAt    string `json:"created_at"`
 	Confirmation struct {
-		Type            string `json:"type"`
-		ReturnURL       string `json:"return_url"`
-		ConfirmationURL string `json:"confirmation_url"`
+		Type              string `json:"type"`
+		ConfirmationToken string `json:"confirmation_token"`
 	} `json:"confirmation"`
 	Test       bool                   `json:"test"`
 	Paid       bool                   `json:"paid"`
