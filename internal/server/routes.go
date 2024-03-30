@@ -13,7 +13,7 @@ import (
 )
 
 func (s *FiberServer) RegisterFiberRoutes() {
-	s.App.Post("/payment", s.YooKassaPaymentHandler)
+	s.App.Post("/api/payment", s.YooKassaPaymentHandler)
 	s.App.Get("/", s.HelloWorldHandler)
 
 }
