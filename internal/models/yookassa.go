@@ -9,6 +9,7 @@ type YooKassaPayment struct {
 		Type      string `json:"type,omitempty"`
 		ReturnURL string `json:"return_url,omitempty"`
 	} `json:"confirmation"`
+	Capture bool `json:"capture"`
 	Receipt struct {
 		Customer struct {
 			FullName string `json:"full_name,omitempty"`
